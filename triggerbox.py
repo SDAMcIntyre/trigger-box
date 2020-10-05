@@ -9,7 +9,10 @@ import serial.tools.list_ports
 
 class TriggerBox():
     def __init__(self):      
+        # start character for all trigger box commands, according to documentation
         self.startCharacter = 'S'.encode('utf-8')
+        
+        # auto-detect trigger box on serial port
         print('Connecting to trigger box...')
         connected = False
         ports = serial.tools.list_ports.comports(include_links=False)
@@ -21,7 +24,8 @@ class TriggerBox():
             self.ser = serial.Serial(port.device, 1200, timeout=0.5)
             self.ser.flushInput()
             self.ser.flushOutput()
-            self.send_digital(channel = 1, message = 'T', duration = 0)
+            testwrite = self.make_digital_signal(channel = 1, message = 'T', duration = 0)
+            self.ser.write(testwrite)
             testmessage = self.ser.readline().decode('utf-8')
             if testmessage == 'T':
                 connected = True
@@ -29,9 +33,9 @@ class TriggerBox():
                 break
         if not connected: print('Could not find trigger box. Is it plugged in?')
     
-    def send_digital(self, channel, message, duration):
+    def make_digital_signal(self, channel, message, duration):
         '''
-        channel = the digital channel to send the signal on (1 USB back to this computer, 2 DSUB-9)
+        channel = the digital channel to send the signal on (1: USB back to this computer, 2: DSUB-9)
         message = the byte to send, 0-255 or a single character
         duration = 10 - 655350 ms in 10 ms steps; 0 means infinite
         '''
@@ -47,10 +51,10 @@ class TriggerBox():
                 command.extend(i.encode('utf-8'))
         command.extend(time_bytes)
 
-        # send the command to the trigger box
-        self.ser.write(command)
+        # return the command without sending it
+        return(command)
     
-    def send_analog(self, channel, voltage, duration):
+    def make_analog_signal(self, channel, voltage, duration):
         '''
         channel = the analog BNC channel to send the signal on (3-7)
         voltage = 0 - 5 V in 0.1 V steps
@@ -66,10 +70,10 @@ class TriggerBox():
             command.extend(i.to_bytes(1,'big', signed=True))
         command.extend(time_bytes)
 
-        # send the command to the trigger box
-        self.ser.write(command)
+        # return the command without sending it
+        return(command)
         
-    def send_cancel(self, channel):
+    def make_cancel_signal(self, channel):
         '''
         cancel a previously activated trigger on a given channel (1-7)
         '''
@@ -79,6 +83,6 @@ class TriggerBox():
         for i in [commandNumber, channel, 0, 0, 0]:
             command.extend(i.to_bytes(1,'big', signed=True))       
 
-        # send the command to the trigger box
-        self.ser.write(command)
+        # return the command without sending it
+        return(command)
         
