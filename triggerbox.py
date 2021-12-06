@@ -6,6 +6,8 @@ import serial
 import serial.tools.list_ports
 # working with bytes https://www.devdungeon.com/content/working-binary-data-python 
 # https://stackoverflow.com/questions/53214304/python-pyserial-auto-detect-com-ports
+BAUDRATE = 9600
+# BAUDRATE = 1200
 
 class TriggerBox():
     def __init__(self):      
@@ -18,19 +20,25 @@ class TriggerBox():
         ports = serial.tools.list_ports.comports(include_links=False)
         for port in ports :
             print('Checking port '+ port.device)
-            ser = serial.Serial(port.device)
-            if ser.isOpen():
-                ser.close()
-            self.ser = serial.Serial(port.device, 1200, timeout=0.5)
-            self.ser.flushInput()
-            self.ser.flushOutput()
-            testwrite = self.make_digital_signal(channel = 1, message = 'T', duration = 0)
-            self.ser.write(testwrite)
-            testmessage = self.ser.readline().decode('utf-8')
-            if testmessage == 'T':
-                connected = True
-                print('Connected to ' + ser.name)
-                break
+            try:
+                ser = serial.Serial(port.device)
+                if ser.isOpen():
+                    print("closing",port.device)
+                    ser.close()
+                self.ser = serial.Serial(port.device, BAUDRATE, timeout=0.5)
+                # self.ser = serial.Serial('COM8', BAUDRATE, timeout=0.5)
+                self.ser.flushInput()
+                self.ser.flushOutput()
+                testwrite = self.make_digital_signal(channel = 1, message = 'T', duration = 0)
+                self.ser.write(testwrite)
+                testmessage = self.ser.readline().decode('utf-8')
+                print("Response:", testmessage[-1])
+                if testmessage[-1] == 'T':
+                    connected = True
+                    print('Triggerbox connected to ' + ser.name)
+                    break
+            except:
+                print("Problem with",port.device)
         if not connected: print('Could not find trigger box. Is it plugged in?')
     
     def make_digital_signal(self, channel, message, duration):
@@ -70,6 +78,14 @@ class TriggerBox():
             command.extend(i.to_bytes(1,'big', signed=True))
         command.extend(time_bytes)
 
+        # return the command without sending it
+        return(command)
+
+    def make_winsc_signal(self):
+        commandNumber = 4
+        command = bytearray(self.startCharacter)
+        for i in [commandNumber,0,0,0,0]:
+            command.extend(i.to_bytes(1,'big', signed=True))
         # return the command without sending it
         return(command)
         
